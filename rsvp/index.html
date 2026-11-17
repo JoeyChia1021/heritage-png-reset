@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow"><title>AURELIA · Wedding Invitation & RSVP</title>
+<style>
+:root{--paper:#fffaf1;--accent:#ad875f;--ink:#47372f}*{box-sizing:border-box}
+body{margin:0;background:#f8f5f0;color:#453832;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;padding:20px 14px 55px}
+main{max-width:560px;margin:auto}.brand{text-align:center;padding:22px 0 25px;font-family:Georgia,serif;letter-spacing:.21em;font-size:26px;color:#46352e}
+.invite{position:relative;overflow:hidden;padding:35px 27px 45px;text-align:center;background:var(--paper);border:1.5px solid var(--accent);border-radius:25px;box-shadow:0 8px 30px #3527200c;color:var(--ink)}
+.decor{font:24px Georgia,serif;color:var(--accent)}.eyebrow{font-size:10px;letter-spacing:2.6px;text-transform:uppercase;color:var(--accent);font-weight:800}
+h1{font:normal 35px/1.16 Georgia,serif;margin:16px 0}h2{font:normal 26px Georgia,serif;margin:0 0 12px}.photo{width:100%;max-height:270px;object-fit:cover;border-radius:16px;margin-bottom:20px}
+.line{font:15px/1.8 Georgia,serif}.copy{font:16px/1.7 Georgia,serif;white-space:pre-wrap;overflow-wrap:anywhere;margin:27px 0}
+.card{background:white;border:1px solid #e3d9d0;border-radius:23px;padding:26px 23px;margin-top:18px;box-shadow:0 8px 28px #3527200b}
+label{display:block;font-weight:700;font-size:13px;margin:17px 0 7px}select,input,textarea{width:100%;padding:13px;border:1px solid #d9cbc0;border-radius:12px;background:white;color:#372c27;font:inherit}
+textarea{min-height:88px;resize:vertical}button{width:100%;margin-top:20px;min-height:49px;border:0;border-radius:14px;background:#48362e;color:white;font:700 15px system-ui;cursor:pointer}button:disabled{opacity:.6;cursor:wait}
+.help{color:#766b63;font-size:12px;line-height:1.5}.hint{margin:12px 0;padding:14px;background:#fff4ed;border-radius:12px;color:#87472b;font-size:13px;line-height:1.5}
+.success{padding:15px;background:#e9f5ec;border-radius:13px;color:#2e6845}.hidden{display:none}.date{font-size:17px;font-weight:700}a{color:#76533f}
+</style></head><body><main><div class="brand">AURELIA</div><section class="card" id="loading">Opening your personal invitation…</section>
+<section class="invite hidden" id="invitation"><img id="photo" class="photo hidden" alt="Invitation photo"><div class="decor">❧</div><div class="eyebrow">The Wedding Celebration</div><h1 id="names"></h1><div class="line"><div class="date" id="wdate"></div><div id="venue"></div></div><p class="copy" id="message"></p><div class="help" id="dress"></div><p><a id="directions" class="hidden" target="_blank" rel="noopener noreferrer">View venue directions</a></p><div class="decor">❧</div></section>
+<section class="card hidden" id="rsvp"><h2>Will you join us?</h2><p id="greeting"></p><form id="reply"><label for="attendance">Attendance *</label><select id="attendance" required><option value="">Select your response</option><option value="accepted">Accept</option><option value="declined">Decline</option></select>
+<div id="diet"><label for="meal">Catering preference *</label><select id="meal"><option>No preference</option><option>Vegetarian</option><option>Non-vegetarian</option><option>Halal</option><option>Other</option></select><label for="allergies">Food allergies or restrictions (optional)</label><input id="allergies" maxlength="250" placeholder="e.g. Peanuts, shellfish"></div>
+<label for="remarks">Additional remarks (optional)</label><textarea id="remarks" maxlength="800" placeholder="Anything the couple should know?"></textarea><div id="status" aria-live="polite"></div><button id="submit" type="submit">Submit RSVP response</button><p class="help">This invitation link is private. You can update your response using the same link.</p></form></section></main><script src="config.js"></script><script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id),token=new URLSearchParams(location.search).get('token')||'';
+const base=String(window.AURELIA_SUPABASE_URL||'').replace(/\/$/,'');
+const endpoint=`${base}/functions/v1/aurelia-rsvp`;
+const setText=(id,v)=>$(id).textContent=String(v??'');
+function alertText(message,kind='error'){const element=$('status');element.textContent=message;element.className=kind==='ok'?'success':'hint';}
+function error(message){$('loading').textContent=message;$('loading').classList.remove('hidden');}
+const dt=s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s))?String(s).slice(8,10)+'/'+String(s).slice(5,7)+'/'+String(s).slice(0,4):'Date to be confirmed';
+$('attendance').addEventListener('change',()=>{$('diet').classList.toggle('hidden',$('attendance').value==='declined');});
+async function load(){
+ if(!/^https:\/\/[^/]+\.supabase\.co$/.test(base))return error('The RSVP website is not configured yet. Please contact the couple.');
+ if(!/^[a-f\d-]{36}$/i.test(token))return error('Your invitation link is missing or invalid. Ask the couple for a new link.');
+ try{
+  const response=await fetch(`${endpoint}?token=${encodeURIComponent(token)}`,{cache:'no-store'});
+  const payload=await response.json();if(!response.ok)throw Error(payload.error||'Could not open invitation.');
+  const {event,guest,invitation}=payload;
+  const palettes={Champagne:['#fffaf1','#ad875f','#47372f'],'Blush Rose':['#fff3f3','#b77782','#583b43'],Burgundy:['#fff7f4','#913a4d','#492c35'],'Sage Green':['#f9fbf4','#74866e','#344839'],Midnight:['#222a35','#d5b681','#fff8eb']};
+  const palette=palettes[invitation.palette]||palettes.Champagne;
+  ['--paper','--accent','--ink'].forEach((v,i)=>document.documentElement.style.setProperty(v,palette[i]));
+  setText('names',event.couple_names);setText('wdate',dt(event.date));setText('venue',invitation.venue||[event.city,event.state].filter(Boolean).join(', '));
+  setText('message',invitation.message);setText('greeting',`Dear ${guest.name}, please send your reply below.`);
+  setText('dress',invitation.dress_code?`Dress code: ${invitation.dress_code}`:'');
+  if(invitation.directions_url){$('directions').href=invitation.directions_url;$('directions').classList.remove('hidden');}
+  if(invitation.image_url){$('photo').src=invitation.image_url;$('photo').classList.remove('hidden');$('photo').onerror=()=>$('photo').classList.add('hidden');}
+  if(guest.status==='accepted'||guest.status==='declined')$('attendance').value=guest.status;
+  $('diet').classList.toggle('hidden',guest.status==='declined');
+  $('remarks').value=guest.remarks||'';
+  if(guest.dietary_requirements){const meal=guest.dietary_requirements.split(' · ')[0];if([...$('meal').options].some(x=>x.value===meal))$('meal').value=meal;}
+  $('loading').classList.add('hidden');$('invitation').classList.remove('hidden');$('rsvp').classList.remove('hidden');
+ }catch(e){error(`Unable to load invitation: ${e.message}. Check your link and network, or ask the couple for assistance.`);}
+}
+$('reply').addEventListener('submit',async e=>{
+ e.preventDefault();const button=$('submit');button.disabled=true;setText('status','Saving your reply…');
+ try {const body={token,attendance:$('attendance').value,meal:$('meal').value,allergies:$('allergies').value,remarks:$('remarks').value};
+  const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},cache:'no-store',body:JSON.stringify(body)});
+  const data=await response.json();if(!response.ok)throw Error(data.error||'Your reply could not be saved.');
+  alertText(`Thank you! Your ${data.attendance==='accepted'?'acceptance':'decline'} has been saved. You can update it here later.`,'ok');
+ }catch(e){alertText(`Unable to save RSVP: ${e.message}`);}finally{button.disabled=false;}
+});
+load();
+})();
+</script></body></html>
