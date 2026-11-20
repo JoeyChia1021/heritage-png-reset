@@ -14,7 +14,7 @@ textarea{min-height:88px;resize:vertical}button{width:100%;margin-top:20px;min-h
 .success{padding:15px;background:#e9f5ec;border-radius:13px;color:#2e6845}.hidden{display:none}.date{font-size:17px;font-weight:700}a{color:#76533f}
 </style></head><body><main><div class="brand">AURELIA</div><section class="card" id="loading">Opening your personal invitation…</section>
 <section class="invite hidden" id="invitation"><img id="photo" class="photo hidden" alt="Invitation photo"><div class="decor">❧</div><div class="eyebrow">The Wedding Celebration</div><h1 id="names"></h1><div class="line"><div class="date" id="wdate"></div><div id="venue"></div></div><p class="copy" id="message"></p><div class="help" id="dress"></div><p><a id="directions" class="hidden" target="_blank" rel="noopener noreferrer">View venue directions</a></p><div class="decor">❧</div></section>
-<section class="card hidden" id="rsvp"><h2>Will you join us?</h2><p id="greeting"></p><form id="reply"><label for="attendance">Attendance *</label><select id="attendance" required><option value="">Select your response</option><option value="accepted">Accept</option><option value="declined">Decline</option></select>
+<section class="card hidden" id="rsvp"><h2>Will you join us?</h2><p id="greeting"></p><p class="hint" id="deadlineNotice">Your RSVP deadline will appear here.</p><p class="help" id="editNotice" style="border-left:3px solid #a78569;padding:10px 12px;background:#fffaf2">You can return to this private invitation link and update your attendance, meal preference or notes as many times as needed before the deadline. After it closes, contact the couple directly.</p><form id="reply"><label for="attendance">Attendance *</label><select id="attendance" required><option value="">Select your response</option><option value="accepted">Accept</option><option value="declined">Decline</option></select>
 <div id="diet"><label for="meal">Catering preference *</label><select id="meal"><option>No preference</option><option>Vegetarian</option><option>Non-vegetarian</option><option>Halal</option><option>Other</option></select><label for="allergies">Food allergies or restrictions (optional)</label><input id="allergies" maxlength="250" placeholder="e.g. Peanuts, shellfish"></div>
 <label for="remarks">Additional remarks (optional)</label><textarea id="remarks" maxlength="800" placeholder="Anything the couple should know?"></textarea><div id="status" aria-live="polite"></div><button id="submit" type="submit">Submit RSVP response</button><p class="help">This invitation link is private. You can update your response using the same link.</p></form></section></main><script src="config.js"></script><script>
 (()=>{'use strict';
@@ -39,6 +39,17 @@ async function load(){
   setText('names',event.couple_names);setText('wdate',dt(event.date));setText('venue',invitation.venue||[event.city,event.state].filter(Boolean).join(', '));
   setText('message',invitation.message);setText('greeting',`Dear ${guest.name}, please send your reply below.`);
   setText('dress',invitation.dress_code?`Dress code: ${invitation.dress_code}`:'');
+  if(invitation.rsvp_deadline){
+    const deadline=new Date(invitation.rsvp_deadline);
+    const formatted=new Intl.DateTimeFormat('en-MY',{timeZone:'Asia/Kuala_Lumpur',day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true}).format(deadline);
+    setText('deadlineNotice',invitation.rsvp_open
+      ?`Please reply by ${formatted} (Malaysia time). You may update your response until then.`
+      :`RSVP responses closed on ${formatted}. Please contact the couple if you need to change your response.`);
+    if(!invitation.rsvp_open){
+      for(const element of $('reply').querySelectorAll('input,select,textarea,button'))element.disabled=true;
+      setText('submit','RSVP deadline passed');
+    }
+  }
   if(invitation.directions_url){$('directions').href=invitation.directions_url;$('directions').classList.remove('hidden');}
   if(invitation.image_url){$('photo').src=invitation.image_url;$('photo').classList.remove('hidden');$('photo').onerror=()=>$('photo').classList.add('hidden');}
   if(guest.status==='accepted'||guest.status==='declined')$('attendance').value=guest.status;
